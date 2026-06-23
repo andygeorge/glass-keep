@@ -46,3 +46,4 @@ server/*.sqlite-journal
 # Clod
 .claude/
 docs/superpowers
+.superpowers

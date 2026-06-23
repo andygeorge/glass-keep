@@ -2090,6 +2090,43 @@ function AdminPanel({ open, onClose, dark, adminSettings, allUsers, newUserForm,
   );
 }
 
+/** ---------- Tag autocomplete ---------- */
+function filterTagSuggestions(allTags, query, alreadyAdded) {
+  const q = String(query || "").trim().toLowerCase();
+  if (!q) return [];
+  const taken = new Set((alreadyAdded || []).map((t) => String(t).trim().toLowerCase()));
+  return (allTags || []).filter((t) => {
+    const low = String(t).trim().toLowerCase();
+    return low.startsWith(q) && !taken.has(low);
+  });
+}
+
+function TagAutocomplete({ suggestions, highlightIndex, onPick, onHover, dropUp = false }) {
+  if (!suggestions || suggestions.length === 0) return null;
+  const placement = dropUp ? "bottom-full mb-1" : "top-full mt-1";
+  return (
+    <ul
+      className={`absolute z-50 left-0 ${placement} min-w-[12rem] max-h-48 overflow-auto rounded-lg border border-[var(--border-light)] bg-white dark:bg-gray-800 shadow-lg py-1 text-sm`}
+      role="listbox"
+    >
+      {suggestions.map((tag, i) => (
+        <li
+          key={tag}
+          role="option"
+          aria-selected={i === highlightIndex}
+          onMouseDown={(e) => { e.preventDefault(); onPick(tag); }}
+          onMouseEnter={() => onHover && onHover(i)}
+          className={`px-3 py-1.5 cursor-pointer truncate ${
+            i === highlightIndex ? "bg-black/5 dark:bg-white/10" : ""
+          }`}
+        >
+          {tag}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** ---------- NotesUI (presentational) ---------- */
 function NotesUI({
   currentUser, dark, toggleDark,
@@ -2114,7 +2151,9 @@ function NotesUI({
   headerMenuRef, headerBtnRef,
   // new for sidebar
   openSidebar,
+  onGoHome,
   activeTagFilter,
+  tagSuggestions = [],
   sidebarPermanent,
   sidebarWidth,
   // formatting
@@ -2162,6 +2201,36 @@ function NotesUI({
   // Multi-select color popover (local UI state)
   const multiColorBtnRef = useRef(null);
   const [showMultiColorPop, setShowMultiColorPop] = useState(false);
+
+  // Composer tag autocomplete
+  const [composerTagOpen, setComposerTagOpen] = useState(false);
+  const [composerTagHighlight, setComposerTagHighlight] = useState(0);
+  const composerCurrentToken = tags.slice(tags.lastIndexOf(",") + 1).trim();
+  const composerAddedTags = tags.split(",").map((t) => t.trim()).filter(Boolean);
+  const composerTagSuggestions = filterTagSuggestions(tagSuggestions, composerCurrentToken, composerAddedTags);
+  const pickComposerTag = (tag) => {
+    if (!tag) return;
+    const head = tags.slice(0, tags.lastIndexOf(",") + 1);
+    setTags(`${head}${head ? " " : ""}${tag}, `);
+    setComposerTagOpen(false);
+    setComposerTagHighlight(0);
+  };
+  const onComposerTagKeyDown = (e) => {
+    if (!composerTagOpen || composerTagSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setComposerTagHighlight((i) => (i + 1) % composerTagSuggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setComposerTagHighlight((i) => (i - 1 + composerTagSuggestions.length) % composerTagSuggestions.length);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      pickComposerTag(composerTagSuggestions[composerTagHighlight]);
+    } else if (e.key === "Escape") {
+      setComposerTagOpen(false);
+    }
+  };
+
   const tagLabel =
     activeTagFilter === ALL_IMAGES ? "All Images" :
       activeTagFilter === 'ARCHIVED' ? "Archived Notes" :
@@ -2262,16 +2331,24 @@ function NotesUI({
             </button>
           )}
 
-          {/* App logo */}
-          <img
-            src="/favicon-32x32.png"
-            srcSet="/pwa-192.png 2x, /pwa-512.png 3x"
-            alt="Glass Keep logo"
-            className="h-7 w-7 rounded-xl shadow-sm select-none pointer-events-none"
-            draggable="false"
-          />
+          {/* App logo + title — click to return home */}
+          <button
+            type="button"
+            onClick={onGoHome}
+            className="flex items-center gap-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl"
+            title="Go to home view"
+            aria-label="Go to home view"
+          >
+            <img
+              src="/favicon-32x32.png"
+              srcSet="/pwa-192.png 2x, /pwa-512.png 3x"
+              alt="Glass Keep logo"
+              className="h-7 w-7 rounded-xl shadow-sm select-none"
+              draggable="false"
+            />
 
-          <h1 className="hidden sm:block text-2xl sm:text-3xl font-bold">Glass Keep</h1>
+            <h1 className="hidden sm:block text-2xl sm:text-3xl font-bold">Glass Keep</h1>
+          </button>
           {activeTagFilter && (
             <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-indigo-600/10 text-indigo-700 dark:text-indigo-300 border border-indigo-600/20">
               {tagLabel === "All Images" || tagLabel === "Archived Notes" ? tagLabel : `Tag: ${tagLabel}`}
@@ -2503,8 +2580,15 @@ function NotesUI({
             </div>
           ) : (
             <div
-              className="glass-card rounded-xl shadow-lg p-4 mb-8 relative"
+              className={`glass-card rounded-xl shadow-lg p-4 mb-8 relative ${composerTagOpen ? "z-30" : ""}`}
               style={{ backgroundColor: bgFor(composerColor, dark) }}
+              onKeyDownCapture={(e) => {
+                if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  addNote();
+                }
+              }}
             >
               {/* Collapsed single input */}
               {composerCollapsed ? (
@@ -2613,15 +2697,27 @@ function NotesUI({
 
                   {/* Responsive composer footer */}
                   <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:gap-3 gap-3 relative">
-                    <input
-                      value={tags}
-                      onChange={(e) => setTags(e.target.value)}
-                      type="text"
-                      placeholder="Add tags (comma-separated)"
-                      disabled={!isOnline}
-                      className={`w-full sm:flex-1 bg-transparent text-sm placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none p-2 ${!isOnline ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                    />
+                    <div className="relative w-full sm:flex-1">
+                      <input
+                        value={tags}
+                        onChange={(e) => { setTags(e.target.value); setComposerTagOpen(true); setComposerTagHighlight(0); }}
+                        onKeyDown={onComposerTagKeyDown}
+                        onFocus={() => setComposerTagOpen(true)}
+                        onBlur={() => setComposerTagOpen(false)}
+                        type="text"
+                        placeholder="Add tags (comma-separated)"
+                        disabled={!isOnline}
+                        className={`w-full bg-transparent text-sm placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none p-2 ${!isOnline ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      />
+                      {composerTagOpen && (
+                        <TagAutocomplete
+                          suggestions={composerTagSuggestions}
+                          highlightIndex={composerTagHighlight}
+                          onPick={pickComposerTag}
+                          onHover={setComposerTagHighlight}
+                        />
+                      )}
+                    </div>
 
                     <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap sm:flex-none relative">
                       {/* Formatting button (composer) - only for text mode */}
@@ -3089,6 +3185,8 @@ export default function App() {
   const [mBody, setMBody] = useState("");
   const [mTagList, setMTagList] = useState([]);
   const [tagInput, setTagInput] = useState("");
+  const [modalTagOpen, setModalTagOpen] = useState(false);
+  const [modalTagHighlight, setModalTagHighlight] = useState(0);
   const [mColor, setMColor] = useState("default");
   const [viewMode, setViewMode] = useState(true);
   const [mImages, setMImages] = useState([]);
@@ -4703,9 +4801,29 @@ export default function App() {
     });
   };
   const handleTagKeyDown = (e) => {
+    const open = modalTagOpen && modalTagSuggestions.length > 0;
+    if (open && e.key === "ArrowDown") {
+      e.preventDefault();
+      setModalTagHighlight((i) => (i + 1) % modalTagSuggestions.length);
+      return;
+    }
+    if (open && e.key === "ArrowUp") {
+      e.preventDefault();
+      setModalTagHighlight((i) => (i - 1 + modalTagSuggestions.length) % modalTagSuggestions.length);
+      return;
+    }
+    if (e.key === "Escape") {
+      setModalTagOpen(false);
+      return;
+    }
     if (e.key === "Enter" || e.key === "," || e.key === "Tab") {
       e.preventDefault();
-      if (tagInput.trim()) { addTags(tagInput); setTagInput(""); }
+      if (open) {
+        pickModalTag(modalTagSuggestions[modalTagHighlight]);
+      } else if (tagInput.trim()) {
+        addTags(tagInput);
+        setTagInput("");
+      }
     } else if (e.key === "Backspace" && !tagInput) {
       setMTagList((prev) => prev.slice(0, -1));
     }
@@ -5235,6 +5353,19 @@ export default function App() {
       .map(([tag, count]) => ({ tag, count }))
       .sort((a, b) => a.tag.toLowerCase().localeCompare(b.tag.toLowerCase()));
   }, [notes]);
+
+  const modalTagSuggestions = filterTagSuggestions(
+    tagsWithCounts.map((t) => t.tag),
+    tagInput,
+    mTagList
+  );
+  const pickModalTag = (tag) => {
+    if (!tag) return;
+    addTags(tag);
+    setTagInput("");
+    setModalTagOpen(false);
+    setModalTagHighlight(0);
+  };
 
   /** -------- Derived lists (search + tag filter) -------- */
   const filtered = useMemo(() => {
@@ -5995,15 +6126,27 @@ export default function App() {
               ))}
               {/* Tag input - hidden when offline */}
               {isOnline && (
-                <input
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleTagKeyDown}
-                  onBlur={handleTagBlur}
-                  onPaste={handleTagPaste}
-                  placeholder={mTagList.length ? "Add tag" : "Add tags"}
-                  className="bg-transparent text-sm placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none min-w-[8ch] flex-1"
-                />
+                <div className="relative flex-1 min-w-[8ch]">
+                  <input
+                    value={tagInput}
+                    onChange={(e) => { setTagInput(e.target.value); setModalTagOpen(true); setModalTagHighlight(0); }}
+                    onKeyDown={handleTagKeyDown}
+                    onFocus={() => setModalTagOpen(true)}
+                    onBlur={() => { handleTagBlur(); setModalTagOpen(false); }}
+                    onPaste={handleTagPaste}
+                    placeholder={mTagList.length ? "Add tag" : "Add tags"}
+                    className="w-full bg-transparent text-sm placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none"
+                  />
+                  {modalTagOpen && (
+                    <TagAutocomplete
+                      suggestions={modalTagSuggestions}
+                      highlightIndex={modalTagHighlight}
+                      onPick={pickModalTag}
+                      onHover={setModalTagHighlight}
+                      dropUp
+                    />
+                  )}
+                </div>
               )}
             </div>
 
@@ -6573,7 +6716,9 @@ export default function App() {
         headerMenuRef={headerMenuRef}
         headerBtnRef={headerBtnRef}
         openSidebar={() => setSidebarOpen(true)}
+        onGoHome={() => { setTagFilter(null); setSearch(""); setAiResponse(null); }}
         activeTagFilter={tagFilter}
+        tagSuggestions={tagsWithCounts.map((t) => t.tag)}
         sidebarPermanent={alwaysShowSidebarOnWide && windowWidth >= 700}
         sidebarWidth={sidebarWidth}
         // AI props
