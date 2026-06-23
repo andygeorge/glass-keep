@@ -6,7 +6,7 @@ A sleek, Keep-style notes app with Markdown, checklists, images, tag chips, colo
 
 ## 🍴 About this fork
 
-Fork of [nikunjsingh/glass-keep](https://github.com/nikunjsingh/glass-keep) by [@andygeorge](https://github.com/andygeorge). Upstream looks unmaintained, so I'm adding a few small features I wanted. Not trying to replace it — credit to the original author.
+Fork of [nikunjsingh/glass-keep](https://github.com/nikunjsingh/glass-keep). Upstream hasn't been updated in a number of months, so I (Andy) am asking Clod to add some new features. This is not intended to replace upstream, I love the work that @nikunjsingh has done.
 
 A few additions, all coded with [Claude Code](https://claude.com/claude-code):
 
