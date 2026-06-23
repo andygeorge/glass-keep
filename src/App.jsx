@@ -2551,7 +2551,12 @@ function NotesUI({
                         <input
                           value={clInput}
                           onChange={(e) => setClInput(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addComposerItem(); } }}
+                          onKeyDown={(e) => {
+                            if (e.key !== "Enter") return;
+                            e.preventDefault();
+                            if (e.ctrlKey || e.metaKey) addNote();
+                            else addComposerItem();
+                          }}
                           placeholder="List item…"
                           disabled={!isOnline}
                           className={`flex-1 bg-transparent placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none p-2 border-b border-[var(--border-light)] ${!isOnline ? 'opacity-50 cursor-not-allowed' : ''
@@ -5345,6 +5350,11 @@ export default function App() {
 
   /** Composer smart-enter handler */
   const onComposerKeyDown = (e) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+      e.preventDefault();
+      addNote();
+      return;
+    }
     if (e.key !== "Enter" || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) return;
     const el = contentRef.current;
     if (!el) return;
