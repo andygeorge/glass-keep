@@ -1,6 +1,7 @@
 PORT ?= 9092
+IMAGE ?= glass-keep:local
 
-.PHONY: run install build dev clean
+.PHONY: run install build dev clean docker-build
 
 # Default: install deps, build the frontend, and serve API + UI on one port.
 run: install build
@@ -18,3 +19,7 @@ dev: install
 
 clean:
 	rm -rf dist node_modules server/data.sqlite server/data.sqlite-shm server/data.sqlite-wal
+
+# Build the production Docker image locally (run it via your own compose setup).
+docker-build:
+	docker build -t $(IMAGE) .
