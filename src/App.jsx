@@ -2597,9 +2597,9 @@ function NotesUI({
                   value={content}
                   onChange={(e) => { }}
                   onFocus={() => {
-                    // expand and focus title
+                    // expand and focus the note body (content) by default
                     setComposerCollapsed(false);
-                    setTimeout(() => titleRef.current?.focus(), 10);
+                    setTimeout(() => (contentRef.current || titleRef.current)?.focus(), 10);
                   }}
                   placeholder="Write a note..."
                   className="w-full bg-transparent placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none p-2"
@@ -3627,6 +3627,16 @@ export default function App() {
     return () => document.removeEventListener("keydown", onKey);
   }, [sidebarOpen]);
 
+  // Auto-focus the new-note composer the first time we land on home (#/notes)
+  const homeAutoFocusedRef = useRef(false);
+  useEffect(() => {
+    if (homeAutoFocusedRef.current) return;
+    if (!currentUser || route !== "#/notes") return;
+    homeAutoFocusedRef.current = true;
+    setComposerCollapsed(false);
+    setTimeout(() => (contentRef.current || titleRef.current)?.focus(), 50);
+  }, [currentUser, route]);
+
   // Hotkeys: Ctrl-E focuses the new-note composer, Ctrl-K focuses search
   useEffect(() => {
     const onKey = (e) => {
@@ -3636,7 +3646,7 @@ export default function App() {
         e.preventDefault();
         setComposerCollapsed(false);
         window.scrollTo({ top: 0, behavior: "smooth" });
-        setTimeout(() => (titleRef.current || contentRef.current)?.focus(), 10);
+        setTimeout(() => (contentRef.current || titleRef.current)?.focus(), 10);
       } else if (key === "k") {
         e.preventDefault();
         searchRef.current?.focus();

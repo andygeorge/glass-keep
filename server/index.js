@@ -627,6 +627,7 @@ app.post("/api/notes", auth, (req, res) => {
   insertNote.run(n);
   res.status(201).json({
     id: n.id,
+    user_id: n.user_id,
     type: n.type,
     title: n.title,
     content: n.content,
@@ -637,6 +638,9 @@ app.post("/api/notes", auth, (req, res) => {
     pinned: !!n.pinned,
     position: n.position,
     timestamp: n.timestamp,
+    updated_at: null,
+    archived: false,
+    collaborators: null,
   });
 });
 
