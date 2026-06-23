@@ -72,3 +72,4 @@ Multi-stage `Dockerfile`: builder stage runs `npm ci` + `npm run build`, runtime
 - ES modules throughout (`"type": "module"`).
 - Tailwind v4 (via `@tailwindcss/vite`) with a glassmorphism aesthetic; dark/light mode persisted client-side.
 - `AI_CHANGES.md` documents the rationale behind the opt-in AI behavior — consult it before changing AI init flow.
+- When adding a new feature, always update `README.md` — specifically the "About this fork" section — to reflect it.
