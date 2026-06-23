@@ -2130,7 +2130,7 @@ function TagAutocomplete({ suggestions, highlightIndex, onPick, onHover, dropUp 
 /** ---------- NotesUI (presentational) ---------- */
 function NotesUI({
   currentUser, dark, toggleDark,
-  search, setSearch,
+  search, setSearch, searchRef,
   composerType, setComposerType,
   title, setTitle,
   content, setContent, contentRef,
@@ -2366,6 +2366,7 @@ function NotesUI({
         <div className="flex-grow flex justify-center px-4 sm:px-8">
           <div className="relative w-full max-w-lg">
             <input
+              ref={searchRef}
               type="text"
               placeholder={localAiEnabled ? "Search or Ask AI..." : "Search..."}
               className={`w-full bg-transparent border border-[var(--border-light)] rounded-lg pl-4 ${localAiEnabled ? 'pr-14' : 'pr-8'} py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-500 dark:placeholder-gray-400`}
@@ -3134,6 +3135,7 @@ export default function App() {
   // Notes & search
   const [notes, setNotes] = useState([]);
   const [search, setSearch] = useState("");
+  const searchRef = useRef(null);
 
   // Tag filter & sidebar
   const [tagFilter, setTagFilter] = useState(null); // null = all, ALL_IMAGES = only notes with images
@@ -3624,6 +3626,26 @@ export default function App() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [sidebarOpen]);
+
+  // Hotkeys: Ctrl-E focuses the new-note composer, Ctrl-K focuses search
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+      const key = e.key.toLowerCase();
+      if (key === "e") {
+        e.preventDefault();
+        setComposerCollapsed(false);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        setTimeout(() => (titleRef.current || contentRef.current)?.focus(), 10);
+      } else if (key === "k") {
+        e.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
 
   // Cache keys for localStorage
   const NOTES_CACHE_KEY = `glass-keep-notes-${currentUser?.id || 'anonymous'}`;
@@ -4316,8 +4338,10 @@ export default function App() {
       setClInput("");
       setComposerDrawingData({ paths: [], dimensions: null });
       setComposerType("text");
-      setComposerCollapsed(true);
+      // Keep composer open and refocus so you can keep adding notes
+      setComposerCollapsed(false);
       if (contentRef.current) contentRef.current.style.height = "auto";
+      setTimeout(() => (contentRef.current || titleRef.current)?.focus(), 10);
     } catch (e) {
       alert(e.message || "Failed to add note");
     }
@@ -6670,6 +6694,7 @@ export default function App() {
         signOut={signOut}
         search={search}
         setSearch={setSearch}
+        searchRef={searchRef}
         composerType={composerType}
         setComposerType={setComposerType}
         title={title}

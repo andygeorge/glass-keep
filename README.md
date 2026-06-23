@@ -3,6 +3,23 @@
 A sleek, Keep-style notes app with Markdown, checklists, images, tag chips, color themes, dark mode, drag-and-drop reordering, import/export, auth, and a glassy UI — built with Vite + React and a tiny Express + SQLite API.
 
 ---
+
+## 🍴 About this fork
+
+Fork of [nikunjsingh/glass-keep](https://github.com/nikunjsingh/glass-keep) by [@andygeorge](https://github.com/andygeorge). Upstream looks unmaintained, so I'm adding a few small features I wanted. Not trying to replace it — credit to the original author.
+
+A few additions, all coded with [Claude Code](https://claude.com/claude-code):
+
+* Ctrl/Cmd+Enter to add a note from the composer.
+* Composer stays open and refocuses after adding, so you can keep jotting notes.
+* Hotkeys: Ctrl-E opens/focuses the new-note composer, Ctrl-K focuses search.
+* Click the logo/title to go home (clears tag filter, search, and any AI response).
+* Tag autocomplete in the composer and modal editor (↑/↓, Enter, Esc).
+* A `Makefile` — `make run` to build + serve, `make dev` for hot reload.
+
+Everything below is from upstream.
+
+---
 **Web App Screenshots**
 
 <img width="1218" height="677" alt="Screenshot 2026-01-12 at 10 48 22 PM" src="https://github.com/user-attachments/assets/1cbe8035-8a3e-4ac4-aea3-596d8144d2c2" />
